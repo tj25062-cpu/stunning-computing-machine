@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高三复盘系统 - 智胜高考</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1; --primary-dark: #4f46e5; --secondary: #ec4899;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --dark: #1e293b; --light: #f8fafc; --gray: #64748b;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+            --shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.15);
+        }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh; color: var(--dark);
+        }
+        .navbar {
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            padding: 1rem 2rem; position: fixed; width: 100%; top: 0; z-index: 1000;
+            box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo {
+            font-size: 1.5rem; font-weight: 700;
+            background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a { text-decoration: none; color: var(--gray); font-weight: 500; transition: all 0.3s; position: relative; }
+        .nav-links a:hover, .nav-links a.active { color: var(--primary); }
+        .nav-links a.active::after {
+            content: ''; position: absolute; bottom: -5px; left: 0;
+            width: 100%; height: 3px; background: var(--gradient-1); border-radius: 2px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 6rem 2rem 2rem; }
+        .countdown-section {
+            background: var(--gradient-1); border-radius: 20px; padding: 2rem; color: white;
+            margin-bottom: 2rem; box-shadow: var(--shadow); position: relative; overflow: hidden;
+        }
+        .countdown-section::before {
+            content: ''; position: absolute; top: -50%; right: -10%;
+            width: 400px; height: 400px; background: rgba(255,255,255,0.1); border-radius: 50%;
+        }
+        .countdown-title { font-size: 1.2rem; opacity: 0.9; margin-bottom: 0.5rem; }
+        .countdown-days { font-size: 4rem; font-weight: 700; line-height: 1; }
+        .countdown-label { font-size: 1rem; opacity: 0.8; }
+        .countdown-date { position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); text-align: right; }
+        .exam-date { font-size: 1.5rem; font-weight: 600; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: white; border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow);
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-hover); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+        .stat-card.study::before { background: var(--gradient-1); }
+        .stat-card.score::before { background: var(--gradient-2); }
+        .stat-card.error::before { background: var(--gradient-3); }
+        .stat-card.goal::before { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem; }
+        .stat-card.study .stat-icon { background: rgba(99, 102, 241, 0.1); }
+        .stat-card.score .stat-icon { background: rgba(236, 72, 153, 0.1); }
+        .stat-card.error .stat-icon { background: rgba(79, 172, 254, 0.1); }
+        .stat-card.goal .stat-icon { background: rgba(250, 112, 154, 0.1); }
+        .stat-value { font-size: 2rem; font-weight: 700; color: var(--dark); margin-bottom: 0.25rem; }
+        .stat-label { color: var(--gray); font-size: 0.9rem; }
+        .stat-change { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem; }
+        .stat-change.positive { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .stat-change.negative { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .main-content { display: grid; grid-template-columns: 1fr 350px; gap: 2rem; }
+        @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } }
+        .module-card { background: white; border-radius: 20px; padding: 2rem; box-shadow: var(--shadow); margin-bottom: 2rem; }
+        .module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .module-title { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: inherit; font-size: 0.9rem; }
+        .btn-primary { background: var(--gradient-1); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4); }
+        .btn-secondary { background: var(--light); color: var(--dark); }
+        .btn-secondary:hover { background: #e2e8f0; }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--dark); }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-family: inherit; transition: all 0.3s; font-size: 0.9rem; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+        .form-textarea { resize: vertical; min-height: 100px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
+        .score-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .score-table th, .score-table td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .score-table th { font-weight: 600; color: var(--gray); font-size: 0.875rem; text-transform: uppercase; }
+        .score-table tr:hover { background: #f8fafc; }
+        .subject-tag { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 500; }
+        .tag-chinese { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .tag-math { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .tag-english { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .tag-physics { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .tag-chemistry { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .tag-biology { background: rgba(236, 72, 153, 0.1); color: var(--secondary); }
+        .chart-container { position: relative; height: 300px; margin-top: 1rem; }
+        .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+        .sidebar-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); }
+        .sidebar-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .todo-list { list-style: none; }
+        .todo-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: 8px; transition: all 0.3s; cursor: pointer; }
+        .todo-item:hover { background: #f8fafc; }
+        .todo-checkbox { width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 6px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .todo-item.completed .todo-checkbox { background: var(--success); border-color: var(--success); color: white; }
+        .todo-item.completed .todo-text { text-decoration: line-through; color: var(--gray); }
+        .todo-text { flex: 1; font-size: 0.9rem; }
+        .todo-priority { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .priority-high { background: var(--danger); }
+        .priority-medium { background: var(--warning); }
+        .priority-low { background: var(--success); }
+        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .quick-btn { padding: 1rem; border: 2px solid #e2e8f0; border-radius: 12px; background: white; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .quick-btn:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .quick-btn-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .quick-btn-text { font-size: 0.875rem; font-weight: 500; color: var(--dark); }
+        .error-card { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid var(--danger); }
+        .error-subject { font-weight: 600; color: var(--dark); margin-bottom: 0.5rem; }
+        .error-content { font-size: 0.9rem; color: var(--gray); margin-bottom: 0.5rem; }
+        .error-date { font-size: 0.75rem; color: #94a3b8; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal.active { display: flex !important; }
+        .modal-content { background: white; border-radius: 20px; padding: 2rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; animation: modalSlide 0.3s ease; position: relative; }
+        @keyframes modalSlide { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray); transition: color 0.3s; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .modal-close:hover { color: var(--dark); background: #f1f5f9; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .tab { padding: 0.5rem 1rem; border: none; background: none; cursor: pointer; font-weight: 500; color: var(--gray); transition: all 0.3s; border-radius: 8px; font-family: inherit; font-size: 0.9rem; }
+        .tab:hover { background: #f1f5f9; color: var(--dark); }
+        .tab.active { background: var(--gradient-1); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .study-record-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid var(--primary); }
+        .study-record-info { flex: 1; }
+        .study-record-title { font-weight: 600; color: var(--dark); margin-bottom: 0.25rem; }
+        .study-record-meta { font-size: 0.875rem; color: var(--gray); }
+        .empty-state { text-align: center; padding: 3rem; color: var(--gray); }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+        @media (max-width: 768px) { .nav-links { display: none; } .countdown-days { font-size: 2.5rem; } .countdown-date { position: static; transform: none; text-align: left; margin-top: 1rem; } .container { padding: 5rem 1rem 1rem; } .modal-content { width: 95%; padding: 1.5rem; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.6s ease forwards; }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><span>📚</span><span>智胜高考</span></div>
+        <ul class="nav-links">
+            <li><a href="#dashboard" class="active">总览</a></li>
+            <li><a href="#scores">成绩分析</a></li>
+            <li><a href="#study">学习记录</a></li>
+            <li><a href="#errors">错题本</a></li>
+            <li><a href="#goals">目标管理</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="countdown-section animate-in">
+            <div class="countdown-title">距离高考还有</div>
+            <div class="countdown-days" id="countdown">71</div>
+            <div class="countdown-label">天</div>
+            <div class="countdown-date">
+                <div class="exam-date">2026年6月7日</div>
+                <div style="opacity: 0.8; margin-top: 0.5rem;">目标：冲刺理想大学</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card study animate-in delay-1">
+                <div class="stat-icon">⏰</div>
+                <div class="stat-value" id="totalHours">0</div>
+                <div class="stat-label">本月学习时长(小时)</div>
+                <span class="stat-change positive">加油！</span>
+            </div>
+            <div class="stat-card score animate-in delay-2">
+                <div class="stat-icon">📈</div>
+                <div class="stat-value" id="avgScore">--</div>
+                <div class="stat-label">最近一次总分</div>
+                <span class="stat-change positive">持续进步</span>
+            </div>
+            <div class="stat-card error animate-in delay-3">
+                <div class="stat-icon">📝</div>
+                <div class="stat-value" id="errorCount">0</div>
+                <div class="stat-label">待复习错题</div>
+                <span class="stat-change positive">及时复习</span>
+            </div>
+            <div class="stat-card goal animate-in delay-4">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-value" id="goalProgress">--</div>
+                <div class="stat-label">阶段目标完成度</div>
+                <span class="stat-change positive">稳步前进</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-content">
+                <div class="module-card" id="scores">
+                    <div class="module-header">
+                        <div class="module-title"><span>📊</span><span>成绩分析</span></div>
+                        <button type="button" class="btn btn-primary" id="btnAddScore">录入成绩</button>
+                    </div>
+                    <div class="tabs">
+                        <button type="button" class="tab active" data-tab="trend">成绩趋势</button>
+                        <button type="button" class="tab" data-tab="radar">学科雷达</button>
+                        <button type="button" class="tab" data-tab="list">成绩列表</button>
+                    </div>
+                    <div id="trend" class="tab-content active">
+                        <div class="chart-container"><canvas id="trendChart"></canvas></div>
+                    </div>
+                    <div id="radar" class="tab-content">
+                        <div class="chart-container"><canvas id="radarChart"></canvas></div>
+                    </div>
+                    <div id="list" class="tab-content">
+                        <div id="scoreListContainer">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📝</div>
+                                <div>还没有成绩记录</div>
+                                <div style="font-size: 0.875rem; margin-top: 0.5rem;">点击右上角"录入成绩"开始记录</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-card" id="study">
+                    <div class="module-header">
+                        <div class="module-title"><span>📖</span><span>今日学习记录</span></div>
+                        <button type="button" class="btn btn-primary" id="btnAddStudy">添加记录</button>
+                    </div>
+                    <div id="studyRecords">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📚</div>
+                            <div>今天还没有学习记录</div>
+                            <div style="font-size: 0.875rem; margin-top: 0.5rem;">点击右上角"添加记录"开始打卡</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="module-card" id="errors">
+                    <div class="module-header">
+                        <div class="module-title"><span>❌</span><span>最近错题</span></div>
+                        <button type="button" class="btn btn-primary" id="btnAddError">记录错题</button>
+                    </div>
+                    <div id="errorList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✨</div>
+                            <div>还没有错题记录</div>
+                            <div style="font-size: 0.875rem; margin-top: 0.5rem;">继续保持，错题要及时记录哦</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sidebar-card">
+                    <div class="sidebar-title"><span>⚡</span><span>快捷操作</span></div>
+                    <div class="quick-actions">
+                        <button type="button" class="quick-btn" onclick="openModal('scoreModal')">
+                            <div class="quick-btn-icon">📝</div>
+                            <div class="quick-btn-text">录成绩</div>
+                        </button>
+                        <button type="button" class="quick-btn" onclick="openModal('studyModal')">
+                            <div class="quick-btn-icon">📚</div>
+                            <div class="quick-btn-text">记学习</div>
+                        </button>
+                        <button type="button" class="quick-btn" onclick="openModal('errorModal')">
+                            <div class="quick-btn-icon">❌</div>
+                            <div class="quick-btn-text">记错题</div>
+                        </button>
+                        <button type="button" class="quick-btn" onclick="openModal('goalModal')">
+                            <div class="quick-btn-icon">🎯</div>
+                            <div class="quick-btn-text">设目标</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-card">
+                    <div class="sidebar-title"><span>✅</span><span>今日待办</span></div>
+                    <ul class="todo-list" id="todoList">
+                        <li class="todo-item" data-id="1">
+                            <div class="todo-checkbox"></div>
+                            <span class="todo-text">完成数学试卷一套</span>
+                            <div class="todo-priority priority-high"></div>
+                        </li>
+                        <li class="todo-item" data-id="2">
+                            <div class="todo-checkbox"></div>
+                            <span class="todo-text">背诵英语单词50个</span>
+                            <div class="todo-priority priority-medium"></div>
+                        </li>
+                        <li class="todo-item completed" data-id="3">
+                            <div class="todo-checkbox">✓</div>
+                            <span class="todo-text">复习物理力学错题</span>
+                            <div class="todo-priority priority-high"></div>
+                        </li>
+                    </ul>
+                    <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" id="btnAddTodo">+ 添加任务</button>
+                </div>
+
+                <div class="sidebar-card">
+                    <div class="sidebar-title"><span>💡</span><span>学习建议</span></div>
+                    <div style="font-size: 0.9rem; color: var(--gray); line-height: 1.6;" id="suggestions">
+                        欢迎使用高三复盘系统！<br><br>
+                        1. 坚持每日记录学习内容和时长<br><br>
+                        2. 及时录入考试成绩，追踪进步趋势<br><br>
+                        3. 建立错题本，定期复习薄弱环节<br><br>
+                        4. 设定阶段性目标，保持学习动力
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="scoreModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">录入考试成绩</div>
+                <button type="button" class="modal-close" onclick="closeModal('scoreModal')">&times;</button>
+            </div>
+            <form id="scoreForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">考试日期 *</label>
+                        <input type="date" class="form-input" id="examDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">考试类型</label>
+                        <select class="form-select" id="examType">
+                            <option value="月考">月考</option>
+                            <option value="期中">期中考试</option>
+                            <option value="期末">期末考试</option>
+                            <option value="模拟">模拟考试</option>
+                            <option value="周测">周测</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">科目 *</label>
+                    <select class="form-select" id="subject" required>
+                        <option value="">请选择科目</option>
+                        <option value="语文">语文</option>
+                        <option value="数学">数学</option>
+                        <option value="英语">英语</option>
+                        <option value="物理">物理</option>
+                        <option value="化学">化学</option>
+                        <option value="生物">生物</option>
+                        <option value="政治">政治</option>
+                        <option value="历史">历史</option>
+                        <option value="地理">地理</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">分数 *</label>
+                        <input type="number" class="form-input" id="score" min="0" max="150" placeholder="0-150" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">班级排名</label>
+                        <input type="number" class="form-input" id="rank" min="1" placeholder="可选">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">失分原因分析</label>
+                    <textarea class="form-textarea" id="analysis" placeholder="记录本次考试的失分点和原因..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">保存成绩</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="studyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">添加学习记录</div>
+                <button type="button" class="modal-close" onclick="closeModal('studyModal')">&times;</button>
+            </div>
+            <form id="studyForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">日期 *</label>
+                        <input type="date" class="form-input" id="studyDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">科目 *</label>
+                        <select class="form-select" id="studySubject" required>
+                            <option value="">请选择科目</option>
+                            <option value="语文">语文</option>
+                            <option value="数学">数学</option>
+                            <option value="英语">英语</option>
+                            <option value="物理">物理</option>
+                            <option value="化学">化学</option>
+                            <option value="生物">生物</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">学习内容 *</label>
+                    <input type="text" class="form-input" id="studyContent" placeholder="例如：三角函数复习" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">学习时长(分钟) *</label>
+                        <input type="number" class="form-input" id="studyDuration" min="1" placeholder="例如：90" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">效率评分(1-10)</label>
+                        <input type="number" class="form-input" id="studyEfficiency" min="1" max="10" value="8">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">心得/备注</label>
+                    <textarea class="form-textarea" id="studyNote" placeholder="记录学习心得、遇到的问题..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">保存记录</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">记录错题</div>
+                <button type="button" class="modal-close" onclick="closeModal('errorModal')">&times;</button>
+            </div>
+            <form id="errorForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">日期 *</label>
+                        <input type="date" class="form-input" id="errorDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">科目 *</label>
+                        <select class="form-select" id="errorSubject" required>
+                            <option value="">请选择科目</option>
+                            <option value="数学">数学</option>
+                            <option value="物理">物理</option>
+                            <option value="化学">化学</option>
+                            <option value="语文">语文</option>
+                            <option value="英语">英语</option>
+                            <option value="生物">生物</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">知识点/题型 *</label>
+                    <input type="text" class="form-input" id="errorKnowledge" placeholder="例如：函数单调性、电磁感应" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">错误原因 *</label>
+                    <select class="form-select" id="errorReason" required>
+                        <option value="">请选择原因</option>
+                        <option value="概念不清">概念不清</option>
+                        <option value="计算错误">计算错误</option>
+                        <option value="审题失误">审题失误</option>
+                        <option value="思路错误">思路错误</option>
+                        <option value="粗心大意">粗心大意</option>
+                        <option value="完全不会">完全不会</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">题目描述</label>
+                    <textarea class="form-textarea" id="errorDesc" placeholder="描述题目内容..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">正确解法</label>
+                    <textarea class="form-textarea" id="errorSolution" placeholder="记录正确解法..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">保存错题</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="goalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">设置阶段目标</div>
+                <button type="button" class="modal-close" onclick="closeModal('goalModal')">&times;</button>
+            </div>
+            <form id="goalForm">
+                <div class="form-group">
+                    <label class="form-label">目标名称 *</label>
+                    <input type="text" class="form-input" id="goalName" placeholder="例如：一模达到600分" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">截止日期 *</label>
+                        <input type="date" class="form-input" id="goalDeadline" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">优先级</label>
+                        <select class="form-select" id="goalPriority">
+                            <option value="high">高</option>
+                            <option value="medium" selected>中</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">具体行动</label>
+                    <textarea class="form-textarea" id="goalAction" placeholder="为实现这个目标，我需要..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">设定目标</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let scores = JSON.parse(localStorage.getItem('gaokao_scores')) || [];
+        let studyRecords = JSON.parse(localStorage.getItem('gaokao_study')) || [];
+        let errors = JSON.parse(localStorage.getItem('gaokao_errors')) || [];
+        let todos = JSON.parse(localStorage.getItem('gaokao_todos')) || [
+            { id: 1, text: '完成数学试卷一套', completed: false, priority: 'high' },
+            { id: 2, text: '背诵英语单词50个', completed: false, priority: 'medium' },
+            { id: 3, text: '复习物理力学错题', completed: true, priority: 'high' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                if (!input.value) input.value = today;
+            });
+            
+            initCharts();
+            renderScores();
+            renderStudyRecords();
+            renderErrors();
+            renderTodos();
+            updateStats();
+            updateCountdown();
+            bindEvents();
+        });
+
+        function bindEvents() {
+            document.getElementById('btnAddScore').addEventListener('click', () => openModal('scoreModal'));
+            document.getElementById('btnAddStudy').addEventListener('click', () => openModal('studyModal'));
+            document.getElementById('btnAddError').addEventListener('click', () => openModal('errorModal'));
+            document.getElementById('btnAddTodo').addEventListener('click', addTodo);
+
+            document.getElementById('scoreForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                scores.push({
+                    id: Date.now(),
+                    date: document.getElementById('examDate').value,
+                    type: document.getElementById('examType').value,
+                    subject: document.getElementById('subject').value,
+                    score: parseInt(document.getElementById('score').value),
+                    rank: document.getElementById('rank').value,
+                    analysis: document.getElementById('analysis').value
+                });
+                localStorage.setItem('gaokao_scores', JSON.stringify(scores));
+                renderScores();
+                updateStats();
+                closeModal('scoreModal');
+                this.reset();
+                document.getElementById('examDate').value = new Date().toISOString().split('T')[0];
+                alert('成绩录入成功！');
+            });
+
+            document.getElementById('studyForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                studyRecords.push({
+                    id: Date.now(),
+                    date: document.getElementById('studyDate').value,
+                    subject: document.getElementById('studySubject').value,
+                    content: document.getElementById('studyContent').value,
+                    duration: parseInt(document.getElementById('studyDuration').value),
+                    efficiency: parseInt(document.getElementById('studyEfficiency').value),
+                    note: document.getElementById('studyNote').value
+                });
+                localStorage.setItem('gaokao_study', JSON.stringify(studyRecords));
+                renderStudyRecords();
+                updateStats();
+                closeModal('studyModal');
+                this.reset();
+                document.getElementById('studyDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('studyEfficiency').value = 8;
+                alert('学习记录保存成功！');
+            });
+
+            document.getElementById('errorForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                errors.push({
+                    id: Date.now(),
+                    date: document.getElementById('errorDate').value,
+                    subject: document.getElementById('errorSubject').value,
+                    knowledge: document.getElementById('errorKnowledge').value,
+                    reason: document.getElementById('errorReason').value,
+                    desc: document.getElementById('errorDesc').value,
+                    solution: document.getElementById('errorSolution').value
+                });
+                localStorage.setItem('gaokao_errors', JSON.stringify(errors));
+                renderErrors();
+                updateStats();
+                closeModal('errorModal');
+                this.reset();
+                document.getElementById('errorDate').value = new Date().toISOString().split('T')[0];
+                alert('错题记录保存成功！');
+            });
+
+            document.getElementById('goalForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                closeModal('goalModal');
+                this.reset();
+                alert('目标设定成功！加油！💪');
+            });
+
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        }
+
+        function updateCountdown() {
+            const examDate = new Date('2026-06-07');
+            const today = new Date();
+            const days = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+            document.getElementById('countdown').textContent = days > 0 ? days : 0;
+        }
+
+        function initCharts() {
+            const trendCtx = document.getElementById('trendChart');
+            if (trendCtx) {
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+                        datasets: [{
+                            label: '总分',
+                            data: [520, 545, 538, 562, 585, 0],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: false, min: 400, max: 750 } }
+                    }
+                });
+            }
+
+            const radarCtx = document.getElementById('radarChart');
+            if (radarCtx) {
+                new Chart(radarCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['语文', '数学', '英语', '物理', '化学', '生物'],
+                        datasets: [{
+                            label: '当前水平',
+                            data: [115, 125, 128, 85, 78, 82],
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        }, {
+                            label: '目标水平',
+                            data: [120, 135, 135, 90, 85, 88],
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.2)',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { beginAtZero: true, max: 150 } }
+                    }
+                });
+            }
+        }
+
+        function renderScores() {
+            const container = document.getElementById('scoreListContainer');
+            if (scores.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📝</div><div>还没有成绩记录</div><div style="font-size: 0.875rem; margin-top: 0.5rem;">点击右上角"录入成绩"开始记录</div></div>`;
+                return;
+            }
+            container.innerHTML = `<table class="score-table"><thead><tr><th>日期</th><th>科目</th><th>分数</th><th>排名</th><th>操作</th></tr></thead><tbody>${scores.slice().reverse().map(score => `<tr><td>${score.date}</td><td><span class="subject-tag tag-${getSubjectClass(score.subject)}">${score.subject}</span></td><td><strong>${score.score}</strong></td><td>${score.rank || '-'}</td><td><button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteScore(${score.id})">删除</button></td></tr>`).join('')}</tbody></table>`;
+        }
+
+        function getSubjectClass(subject) {
+            const map = { '语文': 'chinese', '数学': 'math', '英语': 'english', '物理': 'physics', '化学': 'chemistry', '生物': 'biology' };
+            return map[subject] || 'chinese';
+        }
+
+        function renderStudyRecords() {
+            const container = document.getElementById('studyRecords');
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = studyRecords.filter(r => r.date === today);
+            if (todayRecords.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📚</div><div>今天还没有学习记录</div><div style="font-size: 0.875rem; margin-top: 0.5rem;">点击右上角"添加记录"开始打卡</div></div>`;
+                return;
+            }
+            container.innerHTML = todayRecords.map(record => `<div class="study-record-item"><div class="study-record-info"><div class="study-record-title">${record.subject} - ${record.content}</div><div class="study-record-meta">${record.duration}分钟 | 效率: ${record.efficiency}/10</div></div><button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;" onclick="deleteStudyRecord(${record.id})">删除</button></div>`).join('');
+        }
+
+        function renderErrors() {
+            const container = document.getElementById('errorList');
+            if (errors.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✨</div><div>还没有错题记录</div><div style="font-size: 0.875rem; margin-top: 0.5rem;">继续保持，错题要及时记录哦</div></div>`;
+                return;
+            }
+            container.innerHTML = errors.slice(-5).reverse().map(error => `<div class="error-card"><div class="error-subject">${error.subject} | ${error.knowledge}</div><div class="error-content">${error.reason}${error.desc ? ' - ' + error.desc.substring(0, 50) : ''}${error.desc && error.desc.length > 50 ? '...' : ''}</div><div class="error-date">${error.date}</div></div>`).join('');
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todoList');
+            list.innerHTML = todos.map(todo => `<li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}"><div class="todo-checkbox">${todo.completed ? '✓' : ''}</div><span class="todo-text">${todo.text}</span><div class="todo-priority priority-${todo.priority}"></div></li>`).join('');
+            list.querySelectorAll('.todo-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    toggleTodo(id);
+                });
+            });
+        }
+
+        function updateStats() {
+            const currentMonth = new Date().getMonth();
+            const monthlyMinutes = studyRecords.filter(r => new Date(r.date).getMonth() === currentMonth).reduce((sum, r) => sum + r.duration, 0);
+            document.getElementById('totalHours').textContent = Math.round(monthlyMinutes / 60);
+            document.getElementById('errorCount').textContent = errors.length;
+            
+            if (scores.length > 0) {
+                const dateGroups = {};
+                scores.forEach(s => {
+                    if (!dateGroups[s.date]) dateGroups[s.date] = 0;
+                    dateGroups[s.date] += s.score;
+                });
+                const sortedDates = Object.keys(dateGroups).sort();
+                document.getElementById('avgScore').textContent = dateGroups[sortedDates[sortedDates.length - 1]];
+            }
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function deleteScore(id) {
+            if (confirm('确定要删除这条成绩记录吗？')) {
+                scores = scores.filter(s => s.id !== id);
+                localStorage.setItem('gaokao_scores', JSON.stringify(scores));
+                renderScores();
+                updateStats();
+            }
+        }
+
+        function deleteStudyRecord(id) {
+            if (confirm('确定要删除这条学习记录吗？')) {
+                studyRecords = studyRecords.filter(r => r.id !== id);
+                localStorage.setItem('gaokao_study', JSON.stringify(studyRecords));
+                renderStudyRecords();
+                updateStats();
+            }
+        }
+
+        function toggleTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                localStorage.setItem('gaokao_todos', JSON.stringify(todos));
+                renderTodos();
+            }
+        }
+
+        function addTodo() {
+            const text = prompt('请输入任务内容：');
+            if (text && text.trim()) {
+                todos.push({ id: Date.now(), text: text.trim(), completed: false, priority: 'medium' });
+                localStorage.setItem('gaokao_todos', JSON.stringify(todos));
+                renderTodos();
+            }
+        }
+
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) closeModal(this.id);
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => closeModal(modal.id));
+            }
+        });
+    </script>
+</body>
+</html>
